@@ -16,9 +16,10 @@ int	main(void)
 	}
 	while ((line = get_next_line(fd)) != NULL)
 	{
-		printf("Each line: %s\n", line);
+		printf("Each line: %s", line);
 		free(line);
 	}
+	printf("Last line: %s", get_next_line(fd));
 
 	close(fd);
 	return (0);

@@ -1,106 +1,100 @@
 #include "get_next_line.h"
 
-static ssize_t	read_fd(char *buffer, int fd)
+static char	*read_fd(int fd)
 {
 	ssize_t	bytes_read;
+    char		*buffer;
 
+    buffer = (char *)malloc((BUFFER_SIZE + 1) * sizeof(char));
+		if (!buffer)
+			return (NULL);
 	bytes_read = read(fd, buffer, BUFFER_SIZE);
 	if (bytes_read <= 0)
-		buffer[0] = '\0';
+        {
+            free(buffer);
+            return (NULL);
+        }
 	else
 		buffer[bytes_read] = '\0';
-	return (bytes_read);
+	return (buffer);
 }
 
-static int	new_line(char *leftover, char **line)
+static char	*new_line(char *leftover)
 {
 	char	*newline;
+    char    *line;
+    char    *tmp;
+	size_t	line_length;
+	size_t	leftover_length;
 
-	if (!leftover)
-		return (0);
 	newline = ft_strchr(leftover, '\n');
 	if (newline)
 	{
-		*newline = '\0';
-		*line = ft_strdup(leftover);
-		if (!*line)
-			return (-1);
-		ft_strlcpy(leftover, newline + 1, ft_strlen(newline + 1) + 1);
-		return (1);
+		line_length = newline + 1 - leftover;
+		line = (char *)malloc(line_length + 1);
+		if (!line)
+			return (NULL);
+        ft_strlcpy(line, leftover, line_length + 1);
+        leftover_length = ft_strlen(newline + 1);
+        if (leftover_length > 0)
+        {
+            tmp = (char *)malloc(leftover_length + 1);
+            if (!tmp)
+                return (NULL);
+            ft_strlcpy(tmp, newline + 1, leftover_length + 1);
+            free(leftover);
+            leftover = ft_strdup(tmp);
+            return (line);
+        }
+        free(leftover);
+		return (line);
 	}
-	return (0);
+	return (NULL);
 }
 
-static char	*get_leftover(int fd, char **leftover, char *buffer)
+static char	*get_next(int fd, char **leftover)
 {
 	char	*line;
+	char	*tmp;
+    char	*buffer;
 
-	line = NULL;
-	while (read_fd(buffer, fd) > 0)
+    buffer = read_fd(fd);
+    if (!buffer)
+         return (NULL);
+    if (*leftover)
+    {
+    	tmp = ft_strjoin(*leftover, buffer); 
+    	free(buffer);
+    	free(*leftover);
+		*leftover = ft_strdup(tmp);
+		free(tmp);
+    }
+	else
 	{
-		*leftover = ft_strjoin(*leftover, buffer);
-		if (!*leftover)
-		{
-			free(buffer);
-			return (NULL);
-		}
-		if (new_line(*leftover, &line))
-		{
-			free(buffer);
-			return (line);
-		}
+		*leftover = ft_strdup(buffer);
+		free(buffer);
 	}
-	free(buffer);
-	if (*leftover && **leftover)
+	if (ft_strchr(*leftover, '\n'))
+        line = new_line(*leftover);
+	else
 		line = ft_strdup(*leftover);
-	free(*leftover);
-	*leftover = NULL;
 	return (line);
 }
 
 char	*get_next_line(int fd)
 {
-	static char	*leftover = NULL;
+	static char	*leftover;
 	char		*line;
-	char		*buffer;
 
 	if (fd < 0 || BUFFER_SIZE <= 0)
 		return (NULL);
-	if (leftover && new_line(leftover, &line))
-		return (line);
-	buffer = (char *)malloc((BUFFER_SIZE + 1) * sizeof(char));
-	if (!buffer)
-		return (NULL);
-	line = get_leftover(fd, &leftover, buffer);
-	return (line);
-}
-
-/*static char	*get_leftover(int fd, char **leftover, char *buffer)
-{
-	char	*line;
-	char	*temp;
-
-	line = NULL;
-	while (read_fd(buffer, fd) > 0)
+	if (!leftover || !ft_strchr(leftover, '\n'))
 	{
-		temp = ft_strjoin(*leftover, buffer);
-		if (!temp)
-		{
-			free(buffer);
+		line = get_next(fd, &leftover);
+		if (!line &&!leftover)
 			return (NULL);
-		}
-		free(*leftover);
-		*leftover = temp;
-		if (new_line(*leftover, &line))
-		{
-			free(buffer);
-			return (line);
-		}
 	}
-	free(buffer);
-	if (*leftover && **leftover)
-		line = ft_strdup(*leftover);
-	free(*leftover);
-	*leftover = NULL;
-	return (line);
-}*/
+	else
+    	line = new_line(leftover);
+    return (line);
+}
