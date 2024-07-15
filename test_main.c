@@ -19,7 +19,6 @@ int	main(void)
 		printf("Each line: %s", line);
 		free(line);
 	}
-	printf("Last line: %s", get_next_line(fd));
 
 	close(fd);
 	return (0);
